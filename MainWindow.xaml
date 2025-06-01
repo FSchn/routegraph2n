@@ -1,0 +1,36 @@
+﻿<Window x:Class="ZusiCLIProject.Routegraph2.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ZusiCLIProject.Routegraph2"
+        mc:Ignorable="d"
+        Title="Streckenplan" Height="805" Width="1040">
+    <Grid>
+        <Menu>
+            <MenuItem Header="Datei">
+                <MenuItem Header="Strecke/Fahrplan öffnen..." Click="ModulOeffnen_Click"/>
+                <MenuItem x:Name="ActionModulAnfuegen" Header="Strecke/Fahrplan anfügen..." Click="ModulAnfuegen_Click"/>
+                <Separator/>
+                <MenuItem Header="Streckenordner öffnen..." Click="OrdnerOeffnen_Click"/>
+                <MenuItem x:Name="ActionOrdnerAnfuegen" Header="Streckenordner anfügen..." Click="OrdnerAnfuegen_Click"/>
+            </MenuItem>
+            <MenuItem Header="Visualisierung" Name="VisualisierungMenu">
+                <MenuItem Header="Gleisfunktion/Keine Gleisfunktion" IsCheckable="True" Name="GleisfunktionMenuItem" Checked="VisualisierungTriggered"/>
+                <MenuItem Header="Krümmung" IsCheckable="True" Name="KruemmungMenuItem" Checked="VisualisierungTriggered"/>
+                <MenuItem Header="Überhöhung" IsCheckable="True" Name="UeberhoehungMenuItem" Checked="VisualisierungTriggered"/>
+                <MenuItem Header="Neigung" IsCheckable="True" Name="NeigungMenuItem" Checked="VisualisierungTriggered"/>
+                <MenuItem Header="Geschwindigkeiten" IsCheckable="True" Name="GeschwindigkeitMenuItem" Checked="VisualisierungTriggered"/>
+                <MenuItem Header="Oberbau" IsCheckable="True" Name="OberbauMenuItem" Checked="VisualisierungTriggered"/>
+                <MenuItem Header="Fahrleitung" IsCheckable="True" Name="FahrleitungMenuItem" Checked="VisualisierungTriggered"/>
+            </MenuItem>
+            <MenuItem Header="Ansicht">
+                <MenuItem Header="Vergrößeren" Click="VergroessernMenuItem_Click"/>
+                <MenuItem Header="Verkleinern" Click="VerkleinernMenuItem_Click_1"/>
+            </MenuItem>
+        </Menu>
+        <local:StreckeView x:Name="m_streckeView" Margin="0,22,0,0"/>
+        <Canvas x:Name="m_legendeView" Margin="0,22,0,0" Height="0" VerticalAlignment="Top" Background="#4CFF0000" HorizontalAlignment="Center"/>
+
+    </Grid>
+</Window>
