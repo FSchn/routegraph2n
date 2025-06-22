@@ -1,4 +1,4 @@
-
+﻿
 using System.Linq;
 using ZusiCLIProject.FileLibrary.Zusi3;
 using ZusiCLIProject.Routegraph2;
@@ -82,13 +82,42 @@ namespace ZusiCLIProject.Routegraph2
     }
     public class GleisfunktionSegmentierer : Segmentierer
     {
-        protected override bool IstSegmentGrenze(Strecke.ElementInfo vorgaenger, Strecke.ElementInfo nachfolger) 
+        public GleisfunktionSegmentierer(Segmentierer? gleisdarstellung = null)
+		{
+			Gleisdarstellung = gleisdarstellung;
+		}
+		public Segmentierer? Gleisdarstellung { get; private set; }
+		protected override bool IstSegmentGrenze(Strecke.ElementInfo vorgaenger, Strecke.ElementInfo nachfolger) 
         {
             return vorgaenger.ParentBuffer.HasFunktion(Strecke.Element.Elementfunktion.KeineGleisfunktion) !=
                  nachfolger.ParentBuffer.HasFunktion(Strecke.Element.Elementfunktion.KeineGleisfunktion);
         }
-    }
-    public class GeschwindigkeitSegmentierer : RichtungsInfoSegmentierer
+
+		public override bool IstSegmentStart(Strecke.ElementInfo elementUndRichtung)
+		{
+			if (Gleisdarstellung == null)
+				return base.IstSegmentStart(elementUndRichtung);
+			else
+				return base.IstSegmentStart(elementUndRichtung) || Gleisdarstellung.IstSegmentStart(elementUndRichtung);
+		}
+		public override bool IstSegmentEnde(Strecke.ElementInfo elementUndRichtung)
+		{
+            if (Gleisdarstellung == null)
+    			return base.IstSegmentEnde(elementUndRichtung);
+			else
+				return base.IstSegmentEnde(elementUndRichtung) || Gleisdarstellung.IstSegmentEnde(elementUndRichtung);
+		}
+
+		public override bool BeideRichtungen { get { return (Gleisdarstellung == null) ? base.BeideRichtungen : Gleisdarstellung.BeideRichtungen; } }
+	}
+	public class NullSegmentierer : Segmentierer
+	{
+		protected override bool IstSegmentGrenze(Strecke.ElementInfo vorgaenger, Strecke.ElementInfo nachfolger)
+		{
+            return false;
+		}
+	}
+	public class GeschwindigkeitSegmentierer : RichtungsInfoSegmentierer
     {
         protected override bool IstSegmentGrenze2(Strecke.ElementInfo vorgaenger, Strecke.ElementInfo nachfolger) 
         {

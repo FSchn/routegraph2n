@@ -7,6 +7,7 @@ namespace ZusiCLIProject.Routegraph2
         [STAThread]
         static void Main(string[] args)
         {
+            System.Windows.Forms.Application.EnableVisualStyles();
             var main = new MainWindow();
             if (args.Length > 0)
             {

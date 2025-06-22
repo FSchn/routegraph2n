@@ -20,6 +20,7 @@ using System.Windows.Threading;
 using ZusiCLIProject.FileLibrary.Zusi3;
 using ZusiCLIProject.Routegraph2;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
+using static ZusiCLIProject.FileLibrary.Zusi3.Strecke;
 
 namespace ZusiCLIProject.Routegraph2
 {
@@ -32,17 +33,51 @@ namespace ZusiCLIProject.Routegraph2
 		{
 			isInCtor = true;
 			InitializeComponent();
+			DefaultTitel = this.Title;
 
 			ActionModulAnfuegen.IsEnabled = !m_streckennetz.IsEmpty;
 			ActionOrdnerAnfuegen.IsEnabled = !m_streckennetz.IsEmpty;
 
 			GleisfunktionMenuItem.IsChecked = true;
+			KeineMenuItem.IsChecked = true;
 			isInCtor = false;
 
 			var grpTransf = new TransformGroup();
 			grpTransf.Children.Add(new ScaleTransform(1, -1));
 			grpTransf.Children.Add(new TranslateTransform(0, m_legendeView.Height));
 			m_legendeView.RenderTransform = grpTransf;
+
+			for(int i = 0; true; ++i)
+			{
+				object? val = Microsoft.Win32.Registry.GetValue("HKEY_CURRENT_USER\\SOFTWARE\\Zusi3\\Fahrsim\\Fahrplan", i.ToString(), null);
+				if (val == null)
+					break;
+				string pfad = (string)val;
+				if (string.IsNullOrEmpty(pfad))
+					break;
+				if (i == 0)
+				{
+					var sep = new Separator();
+					MenuDatei.Items.Insert(MenuDatei.Items.IndexOf(ActionOrdnerAnfuegen) + 1, sep);
+				}
+				var men1 = new MenuItem();
+				men1.Header = (i + 1).ToString() + " " + System.IO.Path.GetFileName(pfad);
+				if (System.IO.File.Exists(Datei.TryFindFirstExistingFile(Datei.GetZusiDataDirs(), pfad)))
+				{
+					men1.Click += delegate (object sender, RoutedEventArgs e)
+					{
+						IEnumerable<string> dateinamen = new[] { Datei.TryFindFirstExistingFile(Datei.GetZusiDataDirs(), pfad) };
+						SetzeTitel(dateinamen);
+						m_streckennetz.Clear();
+						OeffneStrecken(dateinamen);
+						AktualisiereDarstellung();
+						SetzeAnsichtZurueck();
+					};
+				}
+				else
+					men1.IsEnabled = false;
+				MenuDatei.Items.Insert(MenuDatei.Items.IndexOf(ActionOrdnerAnfuegen) + 2 + i, men1);
+			}
 		}
 		private bool isInCtor = false;
 
@@ -51,9 +86,25 @@ namespace ZusiCLIProject.Routegraph2
 		//private QGraphicsScene m_legendeScene;
 		private bool m_zeigeBetriebsstellen = false;
 
+		private string DefaultTitel;
+		private void SetzeTitel(IEnumerable<string> dateinamen)
+		{
+			if (dateinamen.Count() != 1)
+			{
+				this.Title = DefaultTitel;
+				return;
+			}
+			string single = dateinamen.Single();
+			string dateiname = System.IO.Path.GetFileName(single);
+			if (string.IsNullOrEmpty(dateiname))
+				this.Title = DefaultTitel;
+			else
+				this.Title = DefaultTitel + " [" + dateiname + "]";
+		}
+
 		private void SetzeAnsichtZurueck() 
 		{
-			m_streckeView.SkaliereAufAnsicht();
+			m_streckeView.SkaliereAufAnsicht(true);
 		}
 
 		/** Oeffnet Streckendateien und fuegt sie zur Liste der offenen Strecken hinzu. */
@@ -197,9 +248,9 @@ namespace ZusiCLIProject.Routegraph2
 		/** Zeigt die aktuell geladenen Strecken im Strecken-Widget an. */
 		private void AktualisiereDarstellung() 
 		{
-			Visualisierung visualisierung;
-			if (GleisfunktionMenuItem.IsChecked)
-				visualisierung = new GleisfunktionVisualisierung();
+			Visualisierung? visualisierung;
+			if (KeineMenuItem.IsChecked)
+				visualisierung = null;
 			else if (KruemmungMenuItem.IsChecked)
 				visualisierung = new KruemmungVisualisierung();
 			else if(UeberhoehungMenuItem.IsChecked)
@@ -215,20 +266,24 @@ namespace ZusiCLIProject.Routegraph2
 			else if(ETCSTrustedAreasMenuItem.IsChecked)
 				visualisierung = new EtcsTrustedAreaVisualisierung();
 			else
-				visualisierung = new GleisfunktionVisualisierung();
+				visualisierung = null;
+
+			if (GleisfunktionMenuItem.IsChecked)
+				visualisierung = new GleisfunktionVisualisierung(visualisierung);
 
 			var timer = DateTime.Now;
-			m_streckeScene = new StreckeScene(m_streckennetz, visualisierung, m_zeigeBetriebsstellen);
+			m_streckeScene = new StreckeScene(m_streckennetz, visualisierung, m_zeigeBetriebsstellen, ETCSTrustedAreasMenuItem.IsChecked);
 			var timeDiff = DateTime.Now.Subtract(timer);
 			System.Diagnostics.Debug.WriteLine("Erstellen der Segmente in {0}", timeDiff);
 			this.m_streckeView.ResetScene(this.m_streckeScene);
 
 			m_legendeView.Children.Clear();
-			var legende = visualisierung.Legende;
+			
+			var legende = (visualisierung == null) ? null : visualisierung.Legende;
 			if (legende != null)
 			{
 				m_legendeView.Children.Add(legende);
-				if (visualisierung.LegendeWidth != null)
+				if (visualisierung?.LegendeWidth != null)
 					legende.RenderTransform = new TranslateTransform(-visualisierung.LegendeWidth.Value / 2.0f, 0);
 			}
 		}
@@ -420,6 +475,7 @@ namespace ZusiCLIProject.Routegraph2
 
 		public void ModulOeffnen(IEnumerable<string> dateinamen)
 		{
+			SetzeTitel(dateinamen);
 			m_streckennetz.Clear();
 			OeffneStrecken(dateinamen);
 			AktualisiereDarstellung();
@@ -432,6 +488,7 @@ namespace ZusiCLIProject.Routegraph2
 
 			if (dateinamen != null && dateinamen.GetEnumerator().MoveNext())
 			{
+				SetzeTitel(dateinamen);
 				m_streckennetz.Clear();
 				OeffneStrecken(dateinamen);
 				AktualisiereDarstellung();
@@ -444,6 +501,7 @@ namespace ZusiCLIProject.Routegraph2
 
 			if (dateinamen != null && dateinamen.GetEnumerator().MoveNext())
 			{
+				this.Title = DefaultTitel;
 				OeffneStrecken(dateinamen);
 				AktualisiereDarstellung();
 			}
@@ -455,6 +513,7 @@ namespace ZusiCLIProject.Routegraph2
 
 			if (dateinamen != null && dateinamen.GetEnumerator().MoveNext())
 			{
+				SetzeTitel(ordnernamen);
 				m_streckennetz.Clear();
 				OeffneStrecken(dateinamen);
 				AktualisiereDarstellung();
@@ -468,19 +527,31 @@ namespace ZusiCLIProject.Routegraph2
 
 			if (dateinamen != null && dateinamen.GetEnumerator().MoveNext())
 			{
+				this.Title = DefaultTitel;
 				OeffneStrecken(dateinamen);
 				AktualisiereDarstellung();
 			}
 		}
 
 
+		private void GleisfunktionTriggered(object sender, RoutedEventArgs e)
+		{
+			// Transformation und Scroll-Position speichern und wiederherstellen
+			var tranfsorm = m_streckeView.RenderTransform;
+			var centerPointH = m_streckeView.HorizontalOffset;
+			var centerPointV = m_streckeView.VerticalOffset;
+			AktualisiereDarstellung();
+			m_streckeView.RenderTransform = tranfsorm;
+			m_streckeView.ScrollToHorizontalOffset(centerPointH);
+			m_streckeView.ScrollToVerticalOffset(centerPointV);
+		}
 		private bool isInVisualisierung = false;
 		private void VisualisierungTriggered(object sender, RoutedEventArgs e)
 		{
 			if (isInCtor)
 				return;
 			isInVisualisierung = true;
-			GleisfunktionMenuItem.IsChecked = GleisfunktionMenuItem == sender;
+			KeineMenuItem.IsChecked = KeineMenuItem == sender;
 			KruemmungMenuItem.IsChecked = KruemmungMenuItem == sender;
 			UeberhoehungMenuItem.IsChecked = UeberhoehungMenuItem == sender;
 			NeigungMenuItem.IsChecked = NeigungMenuItem == sender;
@@ -515,6 +586,10 @@ namespace ZusiCLIProject.Routegraph2
 		{
 			m_streckeView.Verkleinern();
 		}
+		private void SetzeAnsichtZurueckMenuItem_Click(object sender, RoutedEventArgs e)
+		{
+			SetzeAnsichtZurueck();
+		}
 
 		private void BetriebsstellennamenMenuItem_Checked(object sender, RoutedEventArgs e)
 		{
@@ -532,6 +607,17 @@ namespace ZusiCLIProject.Routegraph2
 			m_streckeView.RenderTransform = tranfsorm;
 			m_streckeView.ScrollToHorizontalOffset(centerPointH);
 			m_streckeView.ScrollToVerticalOffset(centerPointV);
+		}
+		private void Beenden_Click(object sender, RoutedEventArgs e)
+		{
+			this.Close();
+		}
+		private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
+		{
+			//WPF bekommt es offenbar nicht hin, die MessageBox mit Visuellen Stilen zu zeichnen...
+			System.Windows.Forms.MessageBox.Show("Routegraph2n " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() + "\r\n\r\n"+
+				"Routegraph2n kann unter der GNU GENERAL PUBLIC LICENSE Version 3 verwendet werden." + "\r\n\r\n" + 
+				"Folgende Zusi-Datenverzeichnisse wurden erkannt:\r\n" + string.Join("\r\n", Datei.GetZusiDataDirs()), "Routegraph2n");
 		}
 	}
 }

@@ -64,7 +64,7 @@ namespace ZusiCLIProject.Routegraph2
                                     Y = (float)(northing - 1000 * dest.NS), 
                                     Z = input.Z };
         }
-		public StreckeScene(Streckennetz streckennetz, Visualisierung visualisierung, bool zeigeBetriebsstellen)
+		public StreckeScene(Streckennetz streckennetz, Visualisierung? visualisierung, bool zeigeBetriebsstellen, bool zeigeEtcsFunkmasten)
         {
             int anzahlSegmente = 0;
             int anzahlStreckenelemente = 0;
@@ -104,6 +104,10 @@ namespace ZusiCLIProject.Routegraph2
 						streckenelement.BlueLocation = KonvertiereUtmZone(streckenelement.BlueLocation, strecke.UTMPoint, utmNeu);
 						streckenelement.GreenLocation = KonvertiereUtmZone(streckenelement.GreenLocation, strecke.UTMPoint, utmNeu);
 					}
+                    foreach(var funkmasten in strecke.ETCSFunkmasten)
+                    {
+                        funkmasten.Location = KonvertiereUtmZone(funkmasten.Location, strecke.UTMPoint, utmNeu);
+					}
 
 					strecke.UTMPoint = utmNeu;
 				}
@@ -125,7 +129,7 @@ namespace ZusiCLIProject.Routegraph2
             m_utmRefPunkt.WE = (int)utmRefWe;
             m_utmRefPunkt.NS = (int)utmRefNs;
 
-            Segmentierer segmentierer = visualisierung.Segmentierer;
+            Segmentierer segmentierer = (visualisierung == null) ? new NullSegmentierer() : visualisierung.Segmentierer;
 			//var richtungen_zusi2 = { StreckenelementRichtung::Norm };
 			//var richtungen_zusi3 = { StreckenelementRichtung::Norm, StreckenelementRichtung::Gegen };
 
@@ -175,7 +179,7 @@ namespace ZusiCLIProject.Routegraph2
                                     (endeNr == startNr && elementRichtung == elementRichtung.ParentBuffer.GreenDirectionInfo))
                             {
                                 // Zusi 3: x = Ost, y = Nord
-                                visualisierung.SetzeDarstellung(item);
+                                visualisierung?.SetzeDarstellung(item);
                                 item.MoveBy(utm_dx, utm_dy);
                                 AddChild(item, strecke);
 								anzahlSegmente++;
@@ -261,7 +265,20 @@ namespace ZusiCLIProject.Routegraph2
 					}
 				} //refpunkt
 
-                foreach (var p in betriebsstellenKoordinaten) {
+				if (zeigeEtcsFunkmasten)
+				{
+					Brush brush = new SolidColorBrush(Colors.Blue);
+					foreach (var funkmasten in strecke.ETCSFunkmasten)
+					{
+						CircleItem ellipse = new CircleItem(funkmasten.Senderadius);
+						var location = new TranslateTransform(utm_dx + funkmasten.Location.X, utm_dy + funkmasten.Location.Y);
+						ellipse.RenderTransform = location;
+						ellipse.Stroke = brush;
+						AddChild(ellipse, strecke);
+					} //funkmasten
+				} //zeigeEtcsFunkmasten
+
+				foreach (var p in betriebsstellenKoordinaten) {
                     string betriebsstelle = p.Key;
                     Rect r = p.Value;
 					System.Windows.Point c = r.Location + (((Vector)r.Size) / 2.0);
@@ -280,6 +297,7 @@ namespace ZusiCLIProject.Routegraph2
 					AddChild(ti, strecke);
 				} //betriebsstellenKoordinaten
 			}
+
 			// TODO: Kreise ohne jegliche Weichen werden nicht als Segmente erkannt.
 
 			System.Diagnostics.Debug.WriteLine("{0} Segmente für {1} Streckenelemente", anzahlSegmente, anzahlStreckenelemente);
@@ -329,4 +347,15 @@ namespace ZusiCLIProject.Routegraph2
         public void SetLod(double value);
     }
 
+	public class CircleItem : MinBreiteGraphicsShape
+	{
+        public CircleItem(double radius, double breite = 1.0) : base(breite)
+		{
+			m_DefiningGeometry = new EllipseGeometry();
+            m_DefiningGeometry.RadiusX = radius;
+            m_DefiningGeometry.RadiusY = radius;
+		}
+        private EllipseGeometry m_DefiningGeometry;
+		protected override Geometry DefiningGeometry { get { return m_DefiningGeometry; } }
+	}
 }

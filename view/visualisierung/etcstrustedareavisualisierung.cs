@@ -24,11 +24,20 @@ namespace ZusiCLIProject.Routegraph2
 
 		public override void SetzeDarstellung(StreckensegmentItem item)
 		{
-			item.Stroke = new SolidColorBrush(item.Start.ParentBuffer.HasFunktion(FileLibrary.Zusi3.Strecke.Element.Elementfunktion.EtcsTrustedArea)
-				? Color.FromRgb(0, 200, 0) : Colors.Black);
+			if (item.Start == EtcsFunkmastPseudoelement)
+				item.Stroke = new SolidColorBrush(Colors.Blue);
+			else
+				item.Stroke = new SolidColorBrush(item.Start.ParentBuffer.HasFunktion(FileLibrary.Zusi3.Strecke.Element.Elementfunktion.EtcsTrustedArea)
+					? Color.FromRgb(0, 200, 0) : Colors.Black);
 		}
 
 		public override Segmentierer Segmentierer { get { return new EtcsTrustedAreaSegmentierer(); } }
+		public static Strecke.ElementInfo EtcsFunkmastPseudoelement { get; private set; } = new();
+		static EtcsTrustedAreaVisualisierung()
+		{
+			EtcsFunkmastPseudoelement.ParentBuffer = new Strecke.Element();
+			EtcsFunkmastPseudoelement.ParentBuffer.GreenDirectionInfoIfSetOnZusi = EtcsFunkmastPseudoelement;
+		}
 		public override System.Windows.Controls.Canvas Legende
 		{
 			get
@@ -43,6 +52,7 @@ namespace ZusiCLIProject.Routegraph2
 					pseudoelement.ParentBuffer.Funktionen = (i == 0 ? 0 : (int)Strecke.Element.Elementfunktion.EtcsTrustedArea);
 					NeuesLegendeElement(result, segmentierer, pseudoelement, i == 0 ? "Keine Trusted Area" : "Trusted Area");
 				}
+				NeuesLegendeElement(result, segmentierer, EtcsFunkmastPseudoelement, "ETCS-Funkmasten");
 				return result;
 			}
 		}

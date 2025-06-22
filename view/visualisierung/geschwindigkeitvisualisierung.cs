@@ -1,4 +1,4 @@
-using ZusiCLIProject.Routegraph2;
+﻿using ZusiCLIProject.Routegraph2;
 using Color = System.Windows.Media.Color;
 using System.Windows.Media;
 using ZusiCLIProject.FileLibrary.Zusi3;
@@ -11,8 +11,8 @@ namespace ZusiCLIProject.Routegraph2
         private static Color FarbeByV(int geschwindigkeit)
         {
             if (geschwindigkeit <= 0) {
-                return System.Windows.Media.Colors.LightGray;
-            } else {
+                return Color.FromRgb(128, 128, 128);
+			} else {
                 int[] colormap = new int[17] { 300, 286, 270, 258, 247, 214, 197, 180, 160, 130, 100, 70, 58, 50, 40, 30, 0 };
                 int hue = colormap[Math.Min(16, (geschwindigkeit - 1) / 10)];  /* <= 10 km/h, <= 20 km/h, ..., >= 170 km/h */
                 return ColorFromHSV(hue, 255, hue == 130 ? 230 : 255);

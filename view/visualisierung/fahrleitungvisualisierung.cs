@@ -1,4 +1,4 @@
-using ZusiCLIProject.Routegraph2;
+﻿using ZusiCLIProject.Routegraph2;
 using ZusiCLIProject.FileLibrary.Zusi3;
 using Color = System.Windows.Media.Color;
 using System;
@@ -26,7 +26,7 @@ namespace ZusiCLIProject.Routegraph2
                 item.Stroke = new SolidColorBrush(value.Item2);
             else
                 item.Stroke = new SolidColorBrush(Color.FromRgb(0, 0, 0));
-            if (fahrleitungTyp != Strecke.Element.Stromsysteme.Ohne && drahthoehe == 0)
+            if ((item.Start == OhneFahrleitungPseudoelement) || (fahrleitungTyp != Strecke.Element.Stromsysteme.Ohne && drahthoehe == 0))
                 item.StrokeDashArray = new DoubleCollection(new double[] { 1, 2 }); //new DoubleCollection(new double[] { 5, 5 });
 			else
                 item.StrokeDashArray = null;
@@ -48,32 +48,36 @@ namespace ZusiCLIProject.Routegraph2
                     pseudoelement.ParentBuffer.Stromsystem = it.Key;
                     NeuesLegendeElement(result, segmentierer, pseudoelement, it.Value.Item1);
                 }
-                pseudoelement.ParentBuffer.Stromsystem = Strecke.Element.Stromsysteme.Unbestimmt;
-                pseudoelement.ParentBuffer.Drahthoehe = 0;
-                NeuesLegendeElement(result, segmentierer, pseudoelement, "gestrichelt = Fahrdrahthöhe 0");
+                NeuesLegendeElement(result, segmentierer, OhneFahrleitungPseudoelement, "gestrichelt = Fahrdrahthöhe 0");
                 return result;
             }
         }
 
         private static readonly Dictionary<Strecke.Element.Stromsysteme, Tuple<string, Color>> farben_;
-        static FahrleitungVisualisierung()
+		public static Strecke.ElementInfo OhneFahrleitungPseudoelement { get; private set; } = new();
+		static FahrleitungVisualisierung()
         {
+			OhneFahrleitungPseudoelement.ParentBuffer = new Strecke.Element();
+		    OhneFahrleitungPseudoelement.ParentBuffer.GreenDirectionInfoIfSetOnZusi = OhneFahrleitungPseudoelement;
+			OhneFahrleitungPseudoelement.ParentBuffer.Stromsystem = Strecke.Element.Stromsysteme.Unbestimmt;
+			OhneFahrleitungPseudoelement.ParentBuffer.Drahthoehe = 0;
+            //Verwendung des ORM-Standards für dei Farben:
             farben_ = new Dictionary<Strecke.Element.Stromsysteme, Tuple<string, Color>>
             {
                 { Strecke.Element.Stromsysteme.Ohne, new Tuple<string, Color>("Ohne", 
-                Color.FromRgb(40, 214, 40)) },
+                Colors.Black) },
                 { Strecke.Element.Stromsysteme.Unbestimmt, new Tuple<string, Color>("Unbestimmt", 
                 Color.FromRgb(128, 128, 128)) },
                 { Strecke.Element.Stromsysteme.AC_15000V_16_7_Hz, new Tuple<string, Color>("15 kV, 16,7 Hz", 
-                Color.FromRgb(255, 0, 0)) },
+                Color.FromRgb(0, 203, 102)) },
                 { Strecke.Element.Stromsysteme.AC_25000V_50_Hz, new Tuple<string, Color>("25 kV, 50 Hz", 
-                Color.FromRgb(0, 121, 255)) },
+                Color.FromRgb(255, 0, 0)) },
                 { Strecke.Element.Stromsysteme.DC_1500V, new Tuple<string, Color>("1500 V, Gleichstrom", 
-                Color.FromRgb(206, 133, 89)) },
+                Color.FromRgb(0, 152, 203)) },
                 { Strecke.Element.Stromsysteme.DC_1200V_Stromschiene, new Tuple<string, Color>("1200 V, Gleichstrom (Stromschiene)", 
-                Color.FromRgb(255, 149, 202)) },
+                Color.FromRgb(0, 122, 203)) },
                 { Strecke.Element.Stromsysteme.DC_3000V, new Tuple<string, Color>("3 kV, Gleichstrom", 
-                Color.FromRgb(0, 202, 202)) }
+                Color.FromRgb(0, 0, 255)) }
             };
         }
 

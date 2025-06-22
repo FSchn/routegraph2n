@@ -48,14 +48,16 @@ namespace ZusiCLIProject.Routegraph2
 			if (m_pen != null)
 				m_pen.Thickness = ((m_minBreite * m_lod) > 1) ? m_breite : (m_minBreite / m_lod);
 		}
-		private Pen m_pen = null;
+		private Pen? m_pen = null;
 		private static System.Collections.Generic.Dictionary<string, Pen> m_penBuffer = new();
 		protected override void OnRender(DrawingContext drawingContext)
 		{
-			string penKey = Stroke.ToString() + "//" + m_minBreite.ToString() + "//" + m_breite.ToString();
+			string penKey = Stroke.ToString() + "//" + m_minBreite.ToString() + "//" + m_breite.ToString() + "//" + ((StrokeDashArray == null) ? "" : StrokeDashArray.ToString()) + "//" + StrokeDashOffset.ToString();
 			if (!m_penBuffer.TryGetValue(penKey, out m_pen))
 			{
 				m_pen = new Pen(Stroke, ((m_minBreite * m_lod) > 1) ? m_breite : (m_minBreite / m_lod));
+				if ((StrokeDashArray != null) && (StrokeDashArray.Count > 0))
+					m_pen.DashStyle = new DashStyle(StrokeDashArray, StrokeDashOffset);
 				m_penBuffer.Add(penKey, m_pen);
 			}
 			drawingContext.DrawGeometry(Fill, m_pen, DefiningGeometry);

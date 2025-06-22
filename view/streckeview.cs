@@ -104,8 +104,12 @@ namespace ZusiCLIProject.Routegraph2
         {
             this.Skalieren(1.0 / 1.1);
         }
-        public void SkaliereAufAnsicht()
+        public void SkaliereAufAnsicht(bool drehungZuruckesetzen)
 		{
+            if (drehungZuruckesetzen)
+            {
+				m_scaler.LayoutTransform = DefaultTransform.Clone();
+			}
 			System.Diagnostics.Debug.WriteLine("UpdateLayout...");
 			var timer = DateTime.Now;
             m_scaler.UpdateLayout();
@@ -282,8 +286,7 @@ namespace ZusiCLIProject.Routegraph2
 		{
             if (e.ChangedButton == System.Windows.Input.MouseButton.Right) 
             {
-				m_scaler.LayoutTransform = DefaultTransform.Clone();
-                SkaliereAufAnsicht();
+                SkaliereAufAnsicht(true);
 			}
 		}
 

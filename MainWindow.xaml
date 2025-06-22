@@ -8,15 +8,19 @@
         Title="Streckenplan" Height="805" Width="1040">
     <Grid>
         <Menu>
-            <MenuItem Header="Datei">
+            <MenuItem Header="Datei" x:Name="MenuDatei">
                 <MenuItem Header="Strecke/Fahrplan öffnen..." Click="ModulOeffnen_Click"/>
                 <MenuItem x:Name="ActionModulAnfuegen" Header="Strecke/Fahrplan anfügen..." Click="ModulAnfuegen_Click"/>
                 <Separator/>
                 <MenuItem Header="Streckenordner öffnen..." Click="OrdnerOeffnen_Click"/>
                 <MenuItem x:Name="ActionOrdnerAnfuegen" Header="Streckenordner anfügen..." Click="OrdnerAnfuegen_Click"/>
+                <Separator/>
+                <MenuItem Header="Beenden" Click="Beenden_Click"/>
             </MenuItem>
             <MenuItem Header="Visualisierung" Name="VisualisierungMenu">
-                <MenuItem Header="Gleisfunktion/Keine Gleisfunktion" IsCheckable="True" Name="GleisfunktionMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
+                <MenuItem Header="Gleisfunktion/Keine Gleisfunktion" IsCheckable="True" Name="GleisfunktionMenuItem" Checked="GleisfunktionTriggered" Unchecked="GleisfunktionTriggered"/>
+                <Separator/>
+                <MenuItem Header="Keine" IsCheckable="True" Name="KeineMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
                 <MenuItem Header="Krümmung" IsCheckable="True" Name="KruemmungMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
                 <MenuItem Header="Überhöhung" IsCheckable="True" Name="UeberhoehungMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
                 <MenuItem Header="Neigung" IsCheckable="True" Name="NeigungMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
@@ -28,8 +32,12 @@
             <MenuItem Header="Ansicht">
                 <MenuItem Header="Vergrößeren" Click="VergroessernMenuItem_Click"/>
                 <MenuItem Header="Verkleinern" Click="VerkleinernMenuItem_Click"/>
+                <MenuItem Header="Ansicht zurücksetzen" Click="SetzeAnsichtZurueckMenuItem_Click"/>
                 <Separator/>
                 <MenuItem Header="Betriebsstellennamen" IsCheckable="True" IsChecked="True" Name="BetriebsstellennamenMenuItem" Checked="BetriebsstellennamenMenuItem_Checked" Unchecked="BetriebsstellennamenMenuItem_Checked"/>
+            </MenuItem>
+            <MenuItem Header="Hilfe">
+                <MenuItem Header="Über Routegraph..." Click="AboutMenuItem_Click"/>
             </MenuItem>
         </Menu>
         <local:StreckeView x:Name="m_streckeView" Margin="0,22,0,0"/>
