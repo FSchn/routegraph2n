@@ -1,4 +1,4 @@
-
+﻿
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,7 +45,7 @@ namespace ZusiCLIProject.Routegraph2
         }
         public int Count { get { return m_strecken.Count; } }
         public bool IsEmpty { get { return m_strecken.Count == 0; } }
-        private readonly Dictionary<string, Strecke> m_strecken = new (System.StringComparer.InvariantCultureIgnoreCase);
+		private readonly Dictionary<string, Strecke> m_strecken = new (System.StringComparer.InvariantCultureIgnoreCase);
 
 		public IEnumerator<KeyValuePair<string, Strecke>> GetEnumerator()
 		{

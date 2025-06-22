@@ -1,4 +1,4 @@
-using ZusiCLIProject.Routegraph2;
+﻿using ZusiCLIProject.Routegraph2;
 using Color = System.Windows.Media.Color;
 using System.Windows.Shapes;
 using System.Windows.Media;
@@ -72,13 +72,13 @@ namespace ZusiCLIProject.Routegraph2
 
         private Label? m_label = null;
 
-        public Label Label
+        public Label? Label
         {
             get
             {
-                if (m_label == null)
+                if (m_label == null && Text != null)
                 {
-                    m_label = new(Text);
+                    m_label = new(Text, VisualTreeHelper.GetDpi(this));
                     m_label.Farbe = Farbe;
                     //m_label->setFlag(QGraphicsItem::ItemIgnoresTransformations);
 
@@ -106,7 +106,7 @@ namespace ZusiCLIProject.Routegraph2
 			tgr.Children.Add(Path.Transform);
 			tgr.Children.Add(new TranslateTransform(x, y));
 			Path.Transform = tgr;
-            Label.AssignLocalTransform(tgr);
+            Label?.AssignLocalTransform(tgr);
 		}
 	}
 }

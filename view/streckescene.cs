@@ -1,5 +1,4 @@
-
-using System;
+﻿using System;
 using System.Windows;
 using System.Collections.Generic;
 using ZusiCLIProject.FileLibrary.Zusi3;
@@ -7,6 +6,7 @@ using ZusiCLIProject.Routegraph2;
 using Colors = System.Windows.Media.Colors;
 using System.Windows.Shapes;
 using System.Windows.Media;
+using System.Windows.Controls;
 
 namespace ZusiCLIProject.Routegraph2
 {
@@ -40,7 +40,31 @@ namespace ZusiCLIProject.Routegraph2
             Aufloesepunkt = 5,
             Signalhaltfall = 6
         };
-        public StreckeScene(Streckennetz streckennetz, Visualisierung visualisierung)
+        private static Location KonvertiereUtmZone(Location input, Strecke.UTM src, Strecke.UTM dest)
+        {
+			var destZone = dest.Zone;
+
+			UTM.UtmToLatLon(
+				input.X + 1000.0 * src.WE,
+				input.Y + 1000.0 * src.NS,
+				src.Zone,
+				/*southhemi=*/0,
+				out double lat,
+				out double lon);
+
+			UTM.LatLonToUtm(
+				lat,
+				lon,
+				destZone,
+				out double easting,
+				out double northing);
+
+
+            return new Location() { X = (float)(easting - 1000 * dest.WE),
+                                    Y = (float)(northing - 1000 * dest.NS), 
+                                    Z = input.Z };
+        }
+		public StreckeScene(Streckennetz streckennetz, Visualisierung visualisierung, bool zeigeBetriebsstellen)
         {
             int anzahlSegmente = 0;
             int anzahlStreckenelemente = 0;
@@ -52,8 +76,41 @@ namespace ZusiCLIProject.Routegraph2
             float maxX = float.MinValue;
             float maxY = float.MinValue;
 
-            // Berechne UTM-Referenzpunkt als Mittelwert der Strecken-Referenzpunkte
-            double utmRefWe = 0.0;
+			// Transformiere Strecken in einheitliche UTM-Zone.
+			int anzahlStreckenMitUtmPunkt = 0;
+            foreach (var it in streckennetz)
+            {
+                var strecke = it.Value;
+                if (strecke.UTMPoint.Zone == 0)
+                    continue;
+
+				++anzahlStreckenMitUtmPunkt;
+				if (m_utmRefPunkt.Zone == 0)
+				{
+					m_utmRefPunkt.Zone = strecke.UTMPoint.Zone;
+				}
+				else if (strecke.UTMPoint.Zone != m_utmRefPunkt.Zone)
+				{
+					System.Diagnostics.Debug.WriteLine("Transformiere Strecke von Zone " + strecke.UTMPoint.Zone + " nach " + m_utmRefPunkt.Zone + " (" + it.Key + ")");
+
+					var utmRefPunktKonvertiert = KonvertiereUtmZone(new Location() { X = 0, Y = 0, Z = 0}, strecke.UTMPoint, m_utmRefPunkt);
+                    var utmNeu = new Strecke.UTM() { WE = (int)(utmRefPunktKonvertiert.X / 1000),
+                        NS = (int)(utmRefPunktKonvertiert.Y / 1000),
+                        Zone = m_utmRefPunkt.Zone
+                    };
+
+                    foreach(var streckenelement in strecke.Streckenelemente) 
+                    {
+						streckenelement.BlueLocation = KonvertiereUtmZone(streckenelement.BlueLocation, strecke.UTMPoint, utmNeu);
+						streckenelement.GreenLocation = KonvertiereUtmZone(streckenelement.GreenLocation, strecke.UTMPoint, utmNeu);
+					}
+
+					strecke.UTMPoint = utmNeu;
+				}
+			}
+
+			// Berechne UTM-Referenzpunkt als Mittelwert der Strecken-Referenzpunkte
+			double utmRefWe = 0.0;
             double utmRefNs = 0.0;
 
             var anzahlStrecken = streckennetz.Count;  // TODO .size()
@@ -61,8 +118,8 @@ namespace ZusiCLIProject.Routegraph2
             {
                 Strecke strecke = it.Value;
                 //if (strecke.UTMPoint != null) {
-                utmRefWe += strecke.UTMPoint.WE / (double)anzahlStrecken;
-                utmRefNs += strecke.UTMPoint.NS / (double)anzahlStrecken;
+                utmRefWe += strecke.UTMPoint.WE / (double)anzahlStreckenMitUtmPunkt;
+                utmRefNs += strecke.UTMPoint.NS / (double)anzahlStreckenMitUtmPunkt;
                 //}
             }
             m_utmRefPunkt.WE = (int)utmRefWe;
@@ -72,6 +129,7 @@ namespace ZusiCLIProject.Routegraph2
 			//var richtungen_zusi2 = { StreckenelementRichtung::Norm };
 			//var richtungen_zusi3 = { StreckenelementRichtung::Norm, StreckenelementRichtung::Gegen };
 
+			var dpi = VisualTreeHelper.GetDpi(this);
 
 			foreach (var it in streckennetz)
             {
@@ -119,7 +177,7 @@ namespace ZusiCLIProject.Routegraph2
                                 // Zusi 3: x = Ost, y = Nord
                                 visualisierung.SetzeDarstellung(item);
                                 item.MoveBy(utm_dx, utm_dy);
-                                AddChild(item);
+                                AddChild(item, strecke);
 								anzahlSegmente++;
                             }
                         }
@@ -160,10 +218,10 @@ namespace ZusiCLIProject.Routegraph2
                                 System.Windows.Point pos = new(posL.X, posL.Y);
 								si.MoveBy(pos.X, pos.Y); //si->setPos(pos);
 								si.MoveBy(utm_dx, utm_dy);
-								AddChild(si);
-								AddChild(si.Label);
+								AddChild(si, strecke);
+								AddChild(si.Label, strecke);
 
-								if ((SignalTyp)(signal.SignalTyp) != SignalTyp.Vorsignal && !string.IsNullOrEmpty(signal.NameBetriebsstelle))
+								if (zeigeBetriebsstellen && ((SignalTyp)(signal.SignalTyp) != SignalTyp.Vorsignal) && !string.IsNullOrEmpty(signal.NameBetriebsstelle))
                                 {
                                     if (!betriebsstellenKoordinaten.TryGetValue(signal.NameBetriebsstelle, out var r))
                                     {
@@ -198,12 +256,12 @@ namespace ZusiCLIProject.Routegraph2
 						var si = new DreieckItem(phi, refpunkt.Info, Colors.Magenta);
                         si.MoveBy(pos.X, pos.Y); //si.setPos(pos);
                         si.MoveBy(utm_dx, utm_dy);
-						AddChild(si);
-						AddChild(si.Label);
+						AddChild(si, strecke);
+						AddChild(si.Label, strecke);
 					}
 				} //refpunkt
 
-				foreach (var p in betriebsstellenKoordinaten) {
+                foreach (var p in betriebsstellenKoordinaten) {
                     string betriebsstelle = p.Key;
                     Rect r = p.Value;
 					System.Windows.Point c = r.Location + (((Vector)r.Size) / 2.0);
@@ -213,18 +271,18 @@ namespace ZusiCLIProject.Routegraph2
                     ri->moveBy(1000 * (strecke->utmPunkt.UTM_WE - this->m_utmRefPunkt.UTM_WE), 1000 * (strecke->utmPunkt.UTM_NS - this->m_utmRefPunkt.UTM_NS));
 #endif
 
-                    var ti = new Label(betriebsstelle);
+                    var ti = new Label(betriebsstelle, dpi);
                     ti.TextAlignment = System.Windows.TextAlignment.Center;
                     ti.VerticalAlignment = VerticalAlignment.Center;
                     ti.Pos = c;
                     ti.MoveBy(utm_dx, utm_dy);
 					ti.Farbe = Colors.Black;
-					AddChild(ti);
+					AddChild(ti, strecke);
 				} //betriebsstellenKoordinaten
 			}
-            // TODO: Kreise ohne jegliche Weichen werden nicht als Segmente erkannt.
+			// TODO: Kreise ohne jegliche Weichen werden nicht als Segmente erkannt.
 
-            System.Console.WriteLine("{0} Segmente für {1} Streckenelemente", anzahlSegmente, anzahlStreckenelemente);
+			System.Diagnostics.Debug.WriteLine("{0} Segmente für {1} Streckenelemente", anzahlSegmente, anzahlStreckenelemente);
 
             if (minX == float.MaxValue)
                 minX = 0;
@@ -248,10 +306,19 @@ namespace ZusiCLIProject.Routegraph2
 		public Rect DisplaArea { get; private set; }
 
         public List<IIgnoreTransformation> IgnoreTransformations { get; private set; } = new();
-        public void AddChild(UIElement element)
+        private Dictionary<Strecke, Canvas> m_subareas = new();
+        public void AddChild(UIElement? element, Strecke strecke)
         {
-            this.Children.Add(element);
-            if (element is IIgnoreTransformation)
+            if (element == null)
+                return;
+            /*if (!m_subareas.TryGetValue(strecke, out Canvas canvas))
+            {
+                canvas = new Canvas();
+                this.Children.Add(canvas);
+            }
+            canvas.Children.Add(element);*/
+			this.Children.Add(element);
+			if (element is IIgnoreTransformation)
                 IgnoreTransformations.Add((IIgnoreTransformation)element);
         }
 		private Strecke.UTM m_utmRefPunkt = new();

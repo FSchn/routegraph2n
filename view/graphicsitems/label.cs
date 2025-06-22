@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -9,16 +9,18 @@ namespace ZusiCLIProject.Routegraph2
 {
     public class Label : Canvas, IIgnoreTransformation
     {
-        public Label(string text)
+        public Label(string text, DpiScale predetectDpi)
         {
             Text = text;
             m_textBlock.Text = text;
-            m_textBlock.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+			System.Windows.Media.FormattedText formattedText  = new(text, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+				new System.Windows.Media.Typeface(m_textBlock.FontFamily, m_textBlock.FontStyle, m_textBlock.FontWeight, m_textBlock.FontStretch),
+				m_textBlock.FontSize, m_textBlock.Foreground, predetectDpi.PixelsPerDip);
 			m_rectangle.Fill = new SolidColorBrush(Colors.White);
             m_rectangle.Opacity = 0.75;
-            m_rectangle.Height = m_textBlock.DesiredSize.Height;
-            m_rectangle.Width = m_textBlock.DesiredSize.Width;
-            WidthCalculated = m_textBlock.DesiredSize.Width;
+            m_rectangle.Height = formattedText.Height;
+            m_rectangle.Width = formattedText.Width;
+            WidthCalculated = formattedText.Width;
 			this.Children.Add(m_rectangle);
             this.Children.Add(m_textBlock);
 			var tgr = new TransformGroup();
@@ -32,7 +34,7 @@ namespace ZusiCLIProject.Routegraph2
 			//SetTop(m_rectangle, -m_rectangle.Height);
 			//SetTop(m_textBlock, -m_rectangle.Height);
 
-			//ToDo: Align, falls n�tig.
+			//ToDo: Align, falls nötig.
 			Farbe = System.Windows.Media.Colors.Black;
 
 		}
@@ -114,53 +116,14 @@ namespace ZusiCLIProject.Routegraph2
 			((TransformGroup)this.RenderTransform).Children[3] = transform;
 		}
         public float MinLod { get; set; } = 0;
-        bool m_opaque = false;
+        bool m_opaque = true;
 		public void SetLod(double value)
         {
             bool opaque = (value > MinLod);
             if (opaque == m_opaque)
                 return;
             m_opaque = opaque;
-			this.Opacity = m_opaque ? 1 : 0;
+			this.Visibility =  m_opaque ? Visibility.Visible : Visibility.Collapsed;
         }
 	}
-    /*public class Label : TextBlock
-    {
-        public Label(string text) : base(text)
-        {
-            this->setZValue(ZWERT_BESCHRIFTUNG);
-        }
-
-        public QRectF BoundingRect()
-        {
-            QRectF result = QGraphicsSimpleTextItem::boundingRect();
-
-            if (m_alignment & Qt::AlignRight) {
-                result.translate(-result.width(), 0);
-            } else if (m_alignment & Qt::AlignHCenter) {
-                result.translate(-result.width() / 2.0, 0);
-            }
-
-            if (m_alignment & Qt::AlignTop) {
-                result.translate(0, -result.height());
-            } else if (m_alignment & Qt::AlignVCenter) {
-                result.translate(0, -result.height() / 2.0);
-            }
-
-            return result;
-        }
-
-        public void Paint(QPainter painter, QStyleOptionGraphicsItem option, QWidget widget)
-        {
-            painter->setPen(Qt::NoPen);
-            painter->setBrush(QBrush(Qt::white));
-            painter->setOpacity(0.75);
-            painter->drawRect(this->boundingRect());
-
-            painter->setPen(this->pen());
-            painter->setBrush(this->brush());
-            painter->setOpacity(1);
-            painter->drawText(this->boundingRect(), this->text());
-        }
-    }*/
 }

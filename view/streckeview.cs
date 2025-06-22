@@ -1,5 +1,4 @@
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -106,11 +105,21 @@ namespace ZusiCLIProject.Routegraph2
             this.Skalieren(1.0 / 1.1);
         }
         public void SkaliereAufAnsicht()
-        {
+		{
+			System.Diagnostics.Debug.WriteLine("UpdateLayout...");
+			var timer = DateTime.Now;
             m_scaler.UpdateLayout();
-            this.InvalidateMeasure();
+			var timeDiff = DateTime.Now.Subtract(timer);
+			System.Diagnostics.Debug.WriteLine("UpdateLayout in {0}", timeDiff);
+			timer = DateTime.Now;
+			this.InvalidateMeasure();
+			timeDiff = DateTime.Now.Subtract(timer);
+			System.Diagnostics.Debug.WriteLine("InvalidateMeasure in {0}", timeDiff);
+			timer = DateTime.Now;
 			this.UpdateLayout();
-            var sceneSize = m_scaler.DesiredSize;
+			timeDiff = DateTime.Now.Subtract(timer);
+			System.Diagnostics.Debug.WriteLine("UpdateLayout in {0}", timeDiff);
+			var sceneSize = m_scaler.DesiredSize;
             bool hasRun = false;
             SizeChangedEventHandler sizeChange = delegate (object sender, SizeChangedEventArgs e)
             {
@@ -140,7 +149,9 @@ namespace ZusiCLIProject.Routegraph2
 		{
             if (System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.None)
             {
+                var t = DateTime.Now;
                 this.Skalieren(Math.Pow(4.0 / 3.0, (e.Delta / 240.0)));
+                System.Diagnostics.Debug.WriteLine("StreckeView_MouseWheel " + DateTime.Now.Subtract(t).ToString());
                 e.Handled = true;
 			}
 		}
@@ -278,12 +289,14 @@ namespace ZusiCLIProject.Routegraph2
 
 		public System.Windows.Controls.ContentControl m_scaler = new();
 		public System.Windows.Media.MatrixTransform m_reverseTransform = new();
+        public EventHandler m_reverseTransform_Changed = null;
 		public void ResetScene(StreckeScene p)//(System.Windows.Media.Visual p)
         {
 			m_scaler.Content = p;
 			Content = m_scaler;
             Measure(new System.Windows.Size(Double.PositiveInfinity, Double.PositiveInfinity));
-            m_reverseTransform.Changed += delegate (object? sender, EventArgs e)
+            m_reverseTransform.Changed -= m_reverseTransform_Changed;
+			m_reverseTransform_Changed = delegate (object? sender, EventArgs e)
             {
                 var p1 = m_reverseTransform.Transform(new System.Windows.Point(0, 0));
                 var p2 = m_reverseTransform.Transform(new System.Windows.Point(1, 0));
@@ -294,6 +307,7 @@ namespace ZusiCLIProject.Routegraph2
 				}
 				UpdateBackgroundStrokeThickness(0.5 / lod);
 			};
+			m_reverseTransform.Changed += m_reverseTransform_Changed;
 
 			foreach (IIgnoreTransformation itf in p.IgnoreTransformations)
             {

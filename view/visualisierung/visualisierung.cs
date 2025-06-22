@@ -1,4 +1,4 @@
-using ZusiCLIProject.Routegraph2;
+﻿using ZusiCLIProject.Routegraph2;
 using ZusiCLIProject.FileLibrary.Zusi3;
 using Color = System.Windows.Media.Color;
 using System;
@@ -29,9 +29,9 @@ namespace ZusiCLIProject.Routegraph2
 			segmentItem.Breite = 5; //Geerbt von MinBreiteGraphicsItem
 			segmentItem.MinBreite = 5; //Geerbt von MinBreiteGraphicsItem
 
-            scene.Children.Add(segmentItem);
+			scene.Children.Add(segmentItem);
 
-            Label label = new(legende);
+            Label label = new(legende, VisualTreeHelper.GetDpi(scene));
             //label.VerticalAlignment = System.Windows.VerticalAlignment.Center;
             label.Pos = new System.Windows.Point(pseudoelement.ParentBuffer.BlueLocation.X + LegendeElementPadding / 2.0f, 0);
             label.Farbe = System.Windows.Media.Colors.Black;
