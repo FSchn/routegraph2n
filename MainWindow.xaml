@@ -16,17 +16,20 @@
                 <MenuItem x:Name="ActionOrdnerAnfuegen" Header="Streckenordner anfügen..." Click="OrdnerAnfuegen_Click"/>
             </MenuItem>
             <MenuItem Header="Visualisierung" Name="VisualisierungMenu">
-                <MenuItem Header="Gleisfunktion/Keine Gleisfunktion" IsCheckable="True" Name="GleisfunktionMenuItem" Checked="VisualisierungTriggered"/>
-                <MenuItem Header="Krümmung" IsCheckable="True" Name="KruemmungMenuItem" Checked="VisualisierungTriggered"/>
-                <MenuItem Header="Überhöhung" IsCheckable="True" Name="UeberhoehungMenuItem" Checked="VisualisierungTriggered"/>
-                <MenuItem Header="Neigung" IsCheckable="True" Name="NeigungMenuItem" Checked="VisualisierungTriggered"/>
-                <MenuItem Header="Geschwindigkeiten" IsCheckable="True" Name="GeschwindigkeitMenuItem" Checked="VisualisierungTriggered"/>
-                <MenuItem Header="Oberbau" IsCheckable="True" Name="OberbauMenuItem" Checked="VisualisierungTriggered"/>
-                <MenuItem Header="Fahrleitung" IsCheckable="True" Name="FahrleitungMenuItem" Checked="VisualisierungTriggered"/>
+                <MenuItem Header="Gleisfunktion/Keine Gleisfunktion" IsCheckable="True" Name="GleisfunktionMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
+                <MenuItem Header="Krümmung" IsCheckable="True" Name="KruemmungMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
+                <MenuItem Header="Überhöhung" IsCheckable="True" Name="UeberhoehungMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
+                <MenuItem Header="Neigung" IsCheckable="True" Name="NeigungMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
+                <MenuItem Header="Geschwindigkeiten" IsCheckable="True" Name="GeschwindigkeitMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
+                <MenuItem Header="Oberbau" IsCheckable="True" Name="OberbauMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
+                <MenuItem Header="Fahrleitung" IsCheckable="True" Name="FahrleitungMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
+                <MenuItem Header="ETCS Trusted Areas" IsCheckable="True" Name="ETCSTrustedAreasMenuItem" Checked="VisualisierungTriggered" Unchecked="VisualisierungUnchecked"/>
             </MenuItem>
             <MenuItem Header="Ansicht">
                 <MenuItem Header="Vergrößeren" Click="VergroessernMenuItem_Click"/>
-                <MenuItem Header="Verkleinern" Click="VerkleinernMenuItem_Click_1"/>
+                <MenuItem Header="Verkleinern" Click="VerkleinernMenuItem_Click"/>
+                <Separator/>
+                <MenuItem Header="Betriebsstellennamen" IsCheckable="True" IsChecked="True" Name="BetriebsstellennamenMenuItem" Checked="BetriebsstellennamenMenuItem_Checked" Unchecked="BetriebsstellennamenMenuItem_Checked"/>
             </MenuItem>
         </Menu>
         <local:StreckeView x:Name="m_streckeView" Margin="0,22,0,0"/>

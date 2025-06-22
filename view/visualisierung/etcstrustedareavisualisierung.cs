@@ -1,33 +1,51 @@
-#include "etcstrustedareavisualisierung.h"
+﻿using ZusiCLIProject.Routegraph2;
+using ZusiCLIProject.FileLibrary.Zusi3;
+using Color = System.Windows.Media.Color;
+using System;
+using System.Windows.Media;
+using System.Collections.Generic;
+using System.Drawing;
 
-#include <QPen>
-#include <QColor>
-
-bool EtcsTrustedAreaSegmentierer::istSegmentGrenze(const StreckenelementUndRichtung vorgaenger, const StreckenelementUndRichtung nachfolger) const
+namespace ZusiCLIProject.Routegraph2
 {
-    const bool gleisfunktionGleich = (hatFktFlag(*vorgaenger, StreckenelementFlag::KeineGleisfunktion) ==
-            hatFktFlag(*nachfolger, StreckenelementFlag::KeineGleisfunktion));
-    const bool trustedAreaGleich = (hatFktFlag(*vorgaenger, StreckenelementFlag::EtcsTrustedArea) ==
-            hatFktFlag(*nachfolger, StreckenelementFlag::EtcsTrustedArea));
-    return !gleisfunktionGleich || !trustedAreaGleich;
-}
+	public class EtcsTrustedAreaSegmentierer : Segmentierer
+	{
+		protected override bool IstSegmentGrenze(Strecke.ElementInfo vorgaenger, Strecke.ElementInfo nachfolger)
+		{
+			bool gleisfunktionGleich = vorgaenger.ParentBuffer.HasFunktion(Strecke.Element.Elementfunktion.KeineGleisfunktion) ==
+				 nachfolger.ParentBuffer.HasFunktion(Strecke.Element.Elementfunktion.KeineGleisfunktion);
+			bool trustedAreaGleich = vorgaenger.ParentBuffer.HasFunktion(Strecke.Element.Elementfunktion.EtcsTrustedArea) ==
+				 nachfolger.ParentBuffer.HasFunktion(Strecke.Element.Elementfunktion.EtcsTrustedArea);
+            return !gleisfunktionGleich || !trustedAreaGleich;
+		}
+	}
+	public class EtcsTrustedAreaVisualisierung : Visualisierung
+	{
 
-void EtcsTrustedAreaVisualisierung::setzeDarstellung(StreckensegmentItem& item)
-{
-    QPen pen = item.pen();
-    pen.setColor(hatFktFlag(*item.start(), StreckenelementFlag::EtcsTrustedArea) ? QColor::fromRgb(0, 200, 0) : Qt::black);
-    item.setPen(pen);
-}
+		public override void SetzeDarstellung(StreckensegmentItem item)
+		{
+			item.Stroke = new SolidColorBrush(item.Start.ParentBuffer.HasFunktion(FileLibrary.Zusi3.Strecke.Element.Elementfunktion.EtcsTrustedArea)
+				? Color.FromRgb(0, 200, 0) : Colors.Black);
+		}
 
-std::unique_ptr<QGraphicsScene> EtcsTrustedAreaVisualisierung::legende()
-{
-    auto result = std::make_unique<QGraphicsScene>();
-    auto segmentierer = this->segmentierer();
-    StrElement streckenelement {};
-    for (int i = 0; i <= 1; ++i) {
-        streckenelement.Fkt = (i == 0 ? 0 : static_cast<int64_t>(StreckenelementFlag::EtcsTrustedArea));
-        this->neuesLegendeElement(*result, *segmentierer, streckenelement,
-            i == 0 ? QString::fromUtf8("Keine Trusted Area") : QString::fromUtf8("Trusted Area"));
-    }
-    return result;
+		public override Segmentierer Segmentierer { get { return new EtcsTrustedAreaSegmentierer(); } }
+		public override System.Windows.Controls.Canvas Legende
+		{
+			get
+			{
+				System.Windows.Controls.Canvas result = new System.Windows.Controls.Canvas();
+				var segmentierer = Segmentierer;
+				Strecke.ElementInfo pseudoelement = new();
+				pseudoelement.ParentBuffer = new Strecke.Element();
+				pseudoelement.ParentBuffer.GreenDirectionInfoIfSetOnZusi = pseudoelement;
+				for (int i = 0; i <= 1; ++i)
+				{
+					pseudoelement.ParentBuffer.Funktionen = (i == 0 ? 0 : (int)Strecke.Element.Elementfunktion.EtcsTrustedArea);
+					NeuesLegendeElement(result, segmentierer, pseudoelement, i == 0 ? "Keine Trusted Area" : "Trusted Area");
+				}
+				return result;
+			}
+		}
+
+	}
 }

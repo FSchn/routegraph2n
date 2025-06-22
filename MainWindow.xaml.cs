@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Security.Cryptography.Xml;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,8 +16,10 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using ZusiCLIProject.FileLibrary.Zusi3;
 using ZusiCLIProject.Routegraph2;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace ZusiCLIProject.Routegraph2
 {
@@ -25,12 +30,12 @@ namespace ZusiCLIProject.Routegraph2
 	{
 		public MainWindow()
 		{
+			isInCtor = true;
 			InitializeComponent();
 
 			ActionModulAnfuegen.IsEnabled = !m_streckennetz.IsEmpty;
 			ActionOrdnerAnfuegen.IsEnabled = !m_streckennetz.IsEmpty;
 
-			isInCtor = true;
 			GleisfunktionMenuItem.IsChecked = true;
 			isInCtor = false;
 
@@ -39,11 +44,12 @@ namespace ZusiCLIProject.Routegraph2
 			grpTransf.Children.Add(new TranslateTransform(0, m_legendeView.Height));
 			m_legendeView.RenderTransform = grpTransf;
 		}
-		bool isInCtor = false;
+		private bool isInCtor = false;
 
-		Streckennetz m_streckennetz = new();
-		StreckeScene? m_streckeScene = null;
-		//QGraphicsScene m_legendeScene;
+		private Streckennetz m_streckennetz = new();
+		private StreckeScene? m_streckeScene = null;
+		//private QGraphicsScene m_legendeScene;
+		private bool m_zeigeBetriebsstellen = false;
 
 		private void SetzeAnsichtZurueck() 
 		{
@@ -167,13 +173,22 @@ namespace ZusiCLIProject.Routegraph2
 			foreach (string b in clearBuf)
 				buf.Remove(b);
 			clearBuf.Clear();
+			var streckenMitUtmPunkt = new Dictionary<string, Zusi>(System.StringComparer.InvariantCultureIgnoreCase);
+			foreach (var b in buf)
+			{
+				foreach (Strecke s in b.Value.Strecken)
+				{
+					if (s.UTMPoint.Zone != 0 && !streckenMitUtmPunkt.ContainsKey(b.Key))
+						streckenMitUtmPunkt.Add(b.Key, b.Value);
+				}
+			}
 
 			var timeDiff = DateTime.Now.Subtract(timer);
-			System.Console.WriteLine("Lesen der Strecke in {0}", timeDiff);
+			System.Diagnostics.Debug.WriteLine("Lesen der Strecke in {0}", timeDiff);
 
 			if (messages.Count > 0) 
 				System.Windows.MessageBox.Show((hasErrors ? "Fehler beim Laden:" : "Hinweis:") + "\r\n" + string.Join("\r\n", messages.ToArray()), hasErrors ? "Fehler beim Laden:" : "Hinweis:");
-			m_streckennetz.AddByBuffer(buf);
+			m_streckennetz.AddByBuffer((streckenMitUtmPunkt.Count > 0) ? streckenMitUtmPunkt : buf);
 
 			ActionModulAnfuegen.IsEnabled = !m_streckennetz.IsEmpty;
 			ActionOrdnerAnfuegen.IsEnabled = !m_streckennetz.IsEmpty;
@@ -197,13 +212,15 @@ namespace ZusiCLIProject.Routegraph2
 				visualisierung = new OberbauVisualisierung();
 			else if(FahrleitungMenuItem.IsChecked)
 				visualisierung = new FahrleitungVisualisierung();
+			else if(ETCSTrustedAreasMenuItem.IsChecked)
+				visualisierung = new EtcsTrustedAreaVisualisierung();
 			else
 				visualisierung = new GleisfunktionVisualisierung();
 
 			var timer = DateTime.Now;
-			m_streckeScene = new StreckeScene(m_streckennetz, visualisierung);
+			m_streckeScene = new StreckeScene(m_streckennetz, visualisierung, m_zeigeBetriebsstellen);
 			var timeDiff = DateTime.Now.Subtract(timer);
-			System.Console.WriteLine("Erstellen der Segmente in {0}", timeDiff);
+			System.Diagnostics.Debug.WriteLine("Erstellen der Segmente in {0}", timeDiff);
 			this.m_streckeView.ResetScene(this.m_streckeScene);
 
 			m_legendeView.Children.Clear();
@@ -242,7 +259,13 @@ namespace ZusiCLIProject.Routegraph2
 			dialog.ShowDialog();
 			return dialog.FileNames;
 		}
-		private IEnumerable<string>? GetStreckeFromOrdnerOeffnenDialog(IEnumerable<string>? ordnernamen, string searchPattern)
+		private IEnumerable<string>? FindeSt3Rekursiv(IEnumerable<string>? ordnernamen, string filter)
+		{
+			bool wasCanceled = false;
+			bool timeElapsed = false;
+			return FindeSt3Rekursiv(ordnernamen, filter, ref wasCanceled, ref timeElapsed, null, null);
+		}
+		private IEnumerable<string>? FindeSt3Rekursiv(IEnumerable<string>? ordnernamen, string filter, ref bool wasCanceled, ref bool timeElapsed, TextBlock? refreshLabel, System.Threading.SynchronizationContext? synchronizationContext)
 		{
 			if (ordnernamen == null)
 				return null;
@@ -263,19 +286,136 @@ namespace ZusiCLIProject.Routegraph2
 					foreach (var pfad2 in zusiDataDirs)
 					{
 						var pfad3 = System.IO.Path.Combine(pfad2, dat.Dateiname);
-						var pfad4 = System.IO.Directory.GetFiles(pfad3, searchPattern, System.IO.SearchOption.AllDirectories);
-						value.AddRange(pfad4);
+						if (!System.IO.Directory.Exists(pfad3))
+							continue;
+						FindeSt3RekursivIntern(pfad3, filter, value, ref wasCanceled, ref timeElapsed, refreshLabel, synchronizationContext);
 					}
 					goto exitForDateiname;
 				}
 				{
-					var pfad4 = System.IO.Directory.GetFiles(dateiname, searchPattern, System.IO.SearchOption.AllDirectories);
-					value.AddRange(pfad4);
+					FindeSt3RekursivIntern(dateiname, filter, value, ref wasCanceled, ref timeElapsed, refreshLabel, synchronizationContext);
 				}
 				exitForDateiname:
 				;
 			}
 			return value;
+		}
+		private void FindeSt3RekursivIntern(string dir, string filter, List<string> value, ref bool wasCanceled, ref bool timeElapsed, TextBlock? refreshLabel, System.Threading.SynchronizationContext? synchronizationContext)
+		{
+			if (wasCanceled)
+				return;
+			if (timeElapsed && refreshLabel != null)
+			{
+				timeElapsed = false;
+				if (synchronizationContext == null)
+					refreshLabel.Text = dir;
+				else
+					synchronizationContext.Post(delegate (object? o)
+					{
+						refreshLabel.Text = dir;
+					}, null);
+			}
+			var subfiles = System.IO.Directory.GetFiles(dir, filter, System.IO.SearchOption.TopDirectoryOnly);
+			value.AddRange(subfiles);
+			var subdirs = System.IO.Directory.GetDirectories(dir, "*", System.IO.SearchOption.TopDirectoryOnly);
+			foreach(var subdir in subdirs)
+			{
+				FindeSt3RekursivIntern(subdir, filter, value, ref wasCanceled, ref timeElapsed, refreshLabel, synchronizationContext);
+			}
+		}
+		private delegate void OpenLoadingGuiBackgroundMethod(ref bool wasCanceled, ref bool timeElapsed, TextBlock caption, TextBlock file, System.Threading.SynchronizationContext? synchronizationContext);
+
+		private IEnumerable<string>? FindeSt3RekursivAssyncGui(IEnumerable<string>? ordnernamen, string filter)
+		{
+			IEnumerable<string>? value = null;
+			OpenLoadingGui(delegate (ref bool wasCanceled, ref bool timeElapsed, TextBlock caption, TextBlock file, System.Threading.SynchronizationContext? synchronizationContext)
+			{
+				if (synchronizationContext == null)
+					caption.Text = "Suche Dateien...";
+				else
+					synchronizationContext.Post(delegate (object? o)
+					{
+						caption.Text = "Suche Dateien...";
+					}, null);
+				value = FindeSt3Rekursiv(ordnernamen, filter, ref wasCanceled, ref timeElapsed, file, synchronizationContext);
+			});
+			return value;
+		}
+		private void OpenLoadingGui(OpenLoadingGuiBackgroundMethod backgroundMethod)
+		{
+			var wnd = new System.Windows.Window();
+			wnd.Width = 450;
+			wnd.Height = 150;
+			wnd.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+			wnd.ResizeMode = ResizeMode.NoResize;
+
+			var grid = new Grid();
+			grid.HorizontalAlignment = System.Windows.HorizontalAlignment.Left;
+			grid.VerticalAlignment = VerticalAlignment.Top;
+			grid.ColumnDefinitions.Add(new ColumnDefinition());
+			grid.RowDefinitions.Add(new RowDefinition());
+			grid.RowDefinitions.Add(new RowDefinition());
+			grid.RowDefinitions.Add(new RowDefinition());
+			grid.RowDefinitions.Add(new RowDefinition());
+			wnd.Content = grid;
+
+			TextBlock caption = new TextBlock();
+			caption.Text = "Suche Dateien...";
+			grid.Children.Add(caption);
+			Grid.SetRow(grid, 0);
+
+			TextBlock file = new TextBlock();
+			file.Text = "";
+			grid.Children.Add(file);
+			Grid.SetRow(file, 1);
+
+			var prog = new System.Windows.Controls.ProgressBar();
+			prog.IsIndeterminate = true;
+			grid.Children.Add(prog);
+			Grid.SetRow(prog, 2);
+
+			var btn = new System.Windows.Controls.Button();
+			btn.Content = "Abbrechen";
+			grid.Children.Add(btn);
+			Grid.SetRow(btn, 4);
+
+			bool wasCanceled = false;
+			bool timeElapsed = false;
+			bool wndWasShown = false;
+
+			btn.Click += delegate (object sender, RoutedEventArgs e) { wasCanceled = true; btn.IsEnabled = false; };
+
+			DispatcherTimer timer = new DispatcherTimer();
+			timer.Interval = TimeSpan.FromSeconds(0.3);
+			timer.Tick += (s, e) =>
+			{
+				timeElapsed = true;
+			};
+			timer.Start();
+
+			BackgroundWorker worker = new BackgroundWorker();
+			System.Threading.SynchronizationContext? synchronizationContext = System.Threading.SynchronizationContext.Current;
+			worker.DoWork += (s, e) =>
+			{
+				backgroundMethod(ref wasCanceled, ref timeElapsed, caption, file, synchronizationContext);
+			};
+			worker.RunWorkerCompleted += (s, e) =>
+			{
+				if (wndWasShown)
+					wnd.Close();
+			};
+			worker.RunWorkerAsync();
+
+			for(int i = 0; i < 6; ++i)
+			{
+				if (!worker.IsBusy)
+					return;
+				System.Threading.Thread.Sleep(50);
+				continue;
+			}
+
+			wndWasShown = true;
+			wnd.ShowDialog();
 		}
 
 		public void ModulOeffnen(IEnumerable<string> dateinamen)
@@ -311,7 +451,7 @@ namespace ZusiCLIProject.Routegraph2
 		private void OrdnerOeffnen_Click(object sender, RoutedEventArgs e)
 		{
 			IEnumerable<string> ordnernamen = ZeigeOrdnerOeffnenDialog();
-			IEnumerable<string>? dateinamen = GetStreckeFromOrdnerOeffnenDialog(ordnernamen, "*.st3");
+			IEnumerable<string>? dateinamen = FindeSt3RekursivAssyncGui(ordnernamen, "*.st3");
 
 			if (dateinamen != null && dateinamen.GetEnumerator().MoveNext())
 			{
@@ -324,7 +464,7 @@ namespace ZusiCLIProject.Routegraph2
 		private void OrdnerAnfuegen_Click(object sender, RoutedEventArgs e)
 		{
 			IEnumerable<string> ordnernamen = ZeigeOrdnerOeffnenDialog();
-			IEnumerable<string>? dateinamen = GetStreckeFromOrdnerOeffnenDialog(ordnernamen, "*.st3");
+			IEnumerable<string>? dateinamen = FindeSt3RekursivAssyncGui(ordnernamen, "*.st3");
 
 			if (dateinamen != null && dateinamen.GetEnumerator().MoveNext())
 			{
@@ -334,10 +474,12 @@ namespace ZusiCLIProject.Routegraph2
 		}
 
 
+		private bool isInVisualisierung = false;
 		private void VisualisierungTriggered(object sender, RoutedEventArgs e)
 		{
 			if (isInCtor)
 				return;
+			isInVisualisierung = true;
 			GleisfunktionMenuItem.IsChecked = GleisfunktionMenuItem == sender;
 			KruemmungMenuItem.IsChecked = KruemmungMenuItem == sender;
 			UeberhoehungMenuItem.IsChecked = UeberhoehungMenuItem == sender;
@@ -345,6 +487,7 @@ namespace ZusiCLIProject.Routegraph2
 			GeschwindigkeitMenuItem.IsChecked = GeschwindigkeitMenuItem == sender;
 			OberbauMenuItem.IsChecked = OberbauMenuItem == sender;
 			FahrleitungMenuItem.IsChecked = FahrleitungMenuItem == sender;
+			ETCSTrustedAreasMenuItem.IsChecked = ETCSTrustedAreasMenuItem == sender;
 
 			// Transformation und Scroll-Position speichern und wiederherstellen
 			var tranfsorm = m_streckeView.RenderTransform;
@@ -354,6 +497,13 @@ namespace ZusiCLIProject.Routegraph2
 			m_streckeView.RenderTransform = tranfsorm;
 			m_streckeView.ScrollToHorizontalOffset(centerPointH);
 			m_streckeView.ScrollToVerticalOffset(centerPointV);
+			isInVisualisierung = false;
+		}
+		private void VisualisierungUnchecked(object sender, RoutedEventArgs e)
+		{
+			if (isInVisualisierung)
+				return;
+			((MenuItem)sender).IsChecked = true; //Unchecking nicht erlauben
 		}
 
 		private void VergroessernMenuItem_Click(object sender, RoutedEventArgs e)
@@ -361,9 +511,27 @@ namespace ZusiCLIProject.Routegraph2
 			m_streckeView.Vergroessern();
 		}
 
-		private void VerkleinernMenuItem_Click_1(object sender, RoutedEventArgs e)
+		private void VerkleinernMenuItem_Click(object sender, RoutedEventArgs e)
 		{
 			m_streckeView.Verkleinern();
+		}
+
+		private void BetriebsstellennamenMenuItem_Checked(object sender, RoutedEventArgs e)
+		{
+			m_zeigeBetriebsstellen = BetriebsstellennamenMenuItem.IsChecked;
+
+			if (isInCtor)
+				return;
+
+			// Transformation und Scroll-Position speichern und wiederherstellen
+			// Transformation und Scroll-Position speichern und wiederherstellen
+			var tranfsorm = m_streckeView.RenderTransform;
+			var centerPointH = m_streckeView.HorizontalOffset;
+			var centerPointV = m_streckeView.VerticalOffset;
+			AktualisiereDarstellung();
+			m_streckeView.RenderTransform = tranfsorm;
+			m_streckeView.ScrollToHorizontalOffset(centerPointH);
+			m_streckeView.ScrollToVerticalOffset(centerPointV);
 		}
 	}
 }

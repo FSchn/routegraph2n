@@ -1,4 +1,4 @@
-using System.Windows.Media;
+﻿using System.Windows.Media;
 using System.Windows.Shapes;
 
 namespace ZusiCLIProject.Routegraph2
@@ -18,8 +18,8 @@ namespace ZusiCLIProject.Routegraph2
             set
             {
                 m_breite = value;
-				this.StrokeThickness = ((m_minBreite * m_lod) > 1 ) ? m_breite : (m_minBreite / m_lod);
-
+				//this.StrokeThickness = ((m_minBreite * m_lod) > 1 ) ? m_breite : (m_minBreite / m_lod);
+				this.InvalidateVisual();
 			}
         }
 
@@ -31,7 +31,7 @@ namespace ZusiCLIProject.Routegraph2
 			{
 				m_minBreite = value;
 				this.StrokeThickness = ((m_minBreite * m_lod) > 1) ? m_breite : (m_minBreite / m_lod);
-
+				this.InvalidateVisual();
 			}
 		}
 
@@ -44,7 +44,21 @@ namespace ZusiCLIProject.Routegraph2
 		public void SetLod(double value)
         {
 			m_lod = value;
-			this.StrokeThickness = ((m_minBreite * m_lod) > 1) ? m_breite : (m_minBreite / m_lod);
+			//this.StrokeThickness = ((m_minBreite * m_lod) > 1) ? m_breite : (m_minBreite / m_lod); //ToDo: Performance-Hezard
+			if (m_pen != null)
+				m_pen.Thickness = ((m_minBreite * m_lod) > 1) ? m_breite : (m_minBreite / m_lod);
+		}
+		private Pen m_pen = null;
+		private static System.Collections.Generic.Dictionary<string, Pen> m_penBuffer = new();
+		protected override void OnRender(DrawingContext drawingContext)
+		{
+			string penKey = Stroke.ToString() + "//" + m_minBreite.ToString() + "//" + m_breite.ToString();
+			if (!m_penBuffer.TryGetValue(penKey, out m_pen))
+			{
+				m_pen = new Pen(Stroke, ((m_minBreite * m_lod) > 1) ? m_breite : (m_minBreite / m_lod));
+				m_penBuffer.Add(penKey, m_pen);
+			}
+			drawingContext.DrawGeometry(Fill, m_pen, DefiningGeometry);
 		}
 	}
 }

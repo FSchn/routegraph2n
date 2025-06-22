@@ -7,10 +7,12 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>True</UseWindowsForms>
     <UseWPF>True</UseWPF>
+    <Version>0.1.16</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Z8ZusiBfpl\Z8ZusiBfpl.csproj" />
+    <ProjectReference Include="..\Z8RoutegraphUtm\Z8RoutegraphUtm.csproj" />
   </ItemGroup>
 
 </Project>
