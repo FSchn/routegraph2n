@@ -52,7 +52,7 @@ namespace ZusiCLIProject.Routegraph2
 		private static System.Collections.Generic.Dictionary<string, Pen> m_penBuffer = new();
 		protected override void OnRender(DrawingContext drawingContext)
 		{
-			string penKey = Stroke.ToString() + "//" + m_minBreite.ToString() + "//" + m_breite.ToString() + "//" + ((StrokeDashArray == null) ? "" : StrokeDashArray.ToString()) + "//" + StrokeDashOffset.ToString();
+			string penKey = (Stroke?.ToString() ?? "") + "//" + m_minBreite.ToString() + "//" + m_breite.ToString() + "//" + ((StrokeDashArray == null) ? "" : StrokeDashArray.ToString()) + "//" + StrokeDashOffset.ToString();
 			if (!m_penBuffer.TryGetValue(penKey, out m_pen))
 			{
 				m_pen = new Pen(Stroke, ((m_minBreite * m_lod) > 1) ? m_breite : (m_minBreite / m_lod));

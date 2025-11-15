@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using ZusiCLIProject.FileLibrary.Zusi3;
 using ZusiCLIProject.Routegraph2;
+using static ZusiCLIProject.FileLibrary.Zusi3.Strecke;
 
 namespace ZusiCLIProject.Routegraph2
 {
@@ -62,6 +63,8 @@ namespace ZusiCLIProject.Routegraph2
 			Path = new PathGeometry(new PathFigure[]{ path });
             this.ToolTip = string.Format("Element {0}ff.", start.ParentBuffer.Nummer);
 			Ende = cur;
+
+			Stroke = new SolidColorBrush(Colors.Black);
 		}
         public Strecke.ElementInfo Start { get; private set; }
         public Strecke.ElementInfo Ende { get; private set; }
