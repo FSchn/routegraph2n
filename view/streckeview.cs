@@ -316,6 +316,14 @@ namespace ZusiCLIProject.Routegraph2
             {
                 itf.AssignInverseTransform(m_reverseTransform);
 			}
+            if (m_grid.Parent != null)
+            {
+				((StreckeScene)m_grid.Parent).Children.Remove(m_grid);
+			}
+			m_grid.Children.Clear();
+            m_gridItems.Clear();
+            m_gridItems = CreateBackground(p.DisplaArea);
+			foreach(var i in m_gridItems) { m_grid.Children.Add(i); }
 			{
 				var p1 = m_reverseTransform.Transform(new System.Windows.Point(0, 0));
 				var p2 = m_reverseTransform.Transform(new System.Windows.Point(1, 0));
@@ -326,14 +334,6 @@ namespace ZusiCLIProject.Routegraph2
 				}
                 UpdateBackgroundStrokeThickness(0.5 / lod);
 			};
-            if (m_grid.Parent != null)
-            {
-				((StreckeScene)m_grid.Parent).Children.Remove(m_grid);
-			}
-			m_grid.Children.Clear();
-            m_gridItems.Clear();
-            m_gridItems = CreateBackground(p.DisplaArea);
-			foreach(var i in m_gridItems) { m_grid.Children.Add(i); }
             p.Children.Insert(0, m_grid);
 		}
 
