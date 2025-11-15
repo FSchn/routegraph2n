@@ -34,7 +34,7 @@ namespace ZusiCLIProject.Routegraph2
 		{
 			isInCtor = true;
 			InitializeComponent();
-			DefaultTitel = this.Title;
+			m_defaultTitel = this.Title;
 
 			ActionModulAnfuegen.IsEnabled = !m_streckennetz.IsEmpty;
 			ActionOrdnerAnfuegen.IsEnabled = !m_streckennetz.IsEmpty;
@@ -59,7 +59,7 @@ namespace ZusiCLIProject.Routegraph2
 				if (i == 0)
 				{
 					var sep = new Separator();
-					MenuDatei.Items.Insert(MenuDatei.Items.IndexOf(ActionOrdnerAnfuegen) + 1, sep);
+					MenuDatei.Items.Insert(MenuDatei.Items.IndexOf(ActionOfficial) + 1, sep);
 				}
 				var men1 = new MenuItem();
 				men1.Header = (i + 1).ToString() + " " + System.IO.Path.GetFileName(pfad);
@@ -78,7 +78,7 @@ namespace ZusiCLIProject.Routegraph2
 				}
 				else
 					men1.IsEnabled = false;
-				MenuDatei.Items.Insert(MenuDatei.Items.IndexOf(ActionOrdnerAnfuegen) + 2 + i, men1);
+				MenuDatei.Items.Insert(MenuDatei.Items.IndexOf(ActionOfficial) + 2 + i, men1);
 			}
 		}
 		private bool isInCtor = false;
@@ -88,20 +88,20 @@ namespace ZusiCLIProject.Routegraph2
 		//private QGraphicsScene m_legendeScene;
 		private bool m_zeigeBetriebsstellen = false;
 
-		private string DefaultTitel;
+		private string m_defaultTitel;
 		private void SetzeTitel(IEnumerable<string> dateinamen)
 		{
 			if (dateinamen.Count() != 1)
 			{
-				this.Title = DefaultTitel;
+				this.Title = m_defaultTitel;
 				return;
 			}
 			string single = dateinamen.Single();
 			string dateiname = System.IO.Path.GetFileName(single);
 			if (string.IsNullOrEmpty(dateiname))
-				this.Title = DefaultTitel;
+				this.Title = m_defaultTitel;
 			else
-				this.Title = DefaultTitel + " [" + dateiname + "]";
+				this.Title = m_defaultTitel + " [" + dateiname + "]";
 		}
 
 		private void SetzeAnsichtZurueck() 
@@ -327,6 +327,20 @@ namespace ZusiCLIProject.Routegraph2
 			SetzeAnsichtZurueck();
 		}
 
+		private void Official_Click(object sender, RoutedEventArgs e)
+		{
+			IEnumerable<string> zusiDirs = Datei.GetZusiDataDirs();
+			if (zusiDirs.Count() == 0)
+				return;
+			zusiDirs = new string[] { zusiDirs.Last() };
+			IEnumerable<string>? dateinamen = new string[] { System.IO.Path.Combine(zusiDirs.Single(), "Routes") };
+			LoadingWindow.OeffneDateien(zusiDirs, dateinamen, m_streckennetz, false, true, delegate (LoadingWindow? loadingWindow)
+			{
+				SetzeTitel(dateinamen);
+				AktualisiereDarstellung();
+				SetzeAnsichtZurueck();
+			});
+		}
 		private void ModulOeffnen_Click(object sender, RoutedEventArgs e)
 		{
 			IEnumerable<string>? dateinamen = ZeigeStreckeOeffnenDialog();
@@ -346,7 +360,7 @@ namespace ZusiCLIProject.Routegraph2
 				return;
 			LoadingWindow.OeffneDateien(Datei.GetZusiDataDirs(), dateinamen, m_streckennetz, true, false, delegate (LoadingWindow? loadingWindow)
 			{
-				this.Title = DefaultTitel;
+				this.Title = m_defaultTitel;
 				AktualisiereDarstellung();
 			});
 		}
@@ -369,7 +383,7 @@ namespace ZusiCLIProject.Routegraph2
 				return;
 			LoadingWindow.OeffneDateien(Datei.GetZusiDataDirs(), ordnernamen, m_streckennetz, true, true, delegate (LoadingWindow? loadingWindow)
 			{
-				this.Title = DefaultTitel;
+				this.Title = m_defaultTitel;
 				AktualisiereDarstellung();
 			});
 		}
